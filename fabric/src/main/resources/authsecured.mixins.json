@@ -2,9 +2,11 @@
   "required": true,
   "package": "net.authsecured.fabric.mixin",
   "compatibilityLevel": "JAVA_21",
+  "refmap": "authsecured-refmap.json",
   "mixins": [
-    "ServerPlayNetworkHandlerMixin",
+    "ItemEntityMixin",
     "PlayerEntityMixin",
+    "ServerPlayNetworkHandlerMixin",
     "ServerPlayerEntityMixin",
     "ServerPlayerInteractionManagerMixin"
   ],
