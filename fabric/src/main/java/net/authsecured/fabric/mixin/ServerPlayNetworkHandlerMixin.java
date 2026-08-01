@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Mixin intercepting player movement, chat messages, and command execution for unauthenticated players.
+ * Mixin intercepting network packets from client to server to restrict unauthenticated movement, chat, and commands.
  */
 @Mixin(ServerPlayNetworkHandler.class)
 public abstract class ServerPlayNetworkHandlerMixin {
@@ -25,26 +25,26 @@ public abstract class ServerPlayNetworkHandlerMixin {
     @Inject(method = "onPlayerMove", at = @At("HEAD"), cancellable = true)
     private void onPlayerMove(PlayerMoveC2SPacket packet, CallbackInfo ci) {
         if (!AuthManager.getInstance().isAuthenticated(player)) {
-            ci.cancel();
             player.requestTeleport(player.getX(), player.getY(), player.getZ());
+            ci.cancel();
         }
     }
 
     @Inject(method = "onChatMessage", at = @At("HEAD"), cancellable = true)
     private void onChatMessage(ChatMessageC2SPacket packet, CallbackInfo ci) {
         if (!AuthManager.getInstance().isAuthenticated(player)) {
+            player.sendMessage(MessageService.getInstance().get("authsecured.login.required"), false);
             ci.cancel();
-            player.sendMessage(MessageService.getInstance().get("authsecured.login.prompt"), false);
         }
     }
 
     @Inject(method = "onCommandExecution", at = @At("HEAD"), cancellable = true)
     private void onCommandExecution(CommandExecutionC2SPacket packet, CallbackInfo ci) {
         if (!AuthManager.getInstance().isAuthenticated(player)) {
-            String command = packet.command().trim().toLowerCase();
-            if (!command.startsWith("login") && !command.startsWith("register") && !command.startsWith("changepassword")) {
+            String cmd = packet.command().toLowerCase().trim();
+            if (!cmd.startsWith("login") && !cmd.startsWith("register") && !cmd.startsWith("l ") && !cmd.startsWith("reg ")) {
+                player.sendMessage(MessageService.getInstance().get("authsecured.login.required"), false);
                 ci.cancel();
-                player.sendMessage(MessageService.getInstance().get("authsecured.command.restriction"), false);
             }
         }
     }

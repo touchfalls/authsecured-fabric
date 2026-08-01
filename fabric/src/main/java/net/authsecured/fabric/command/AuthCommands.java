@@ -80,7 +80,7 @@ public final class AuthCommands {
     }
 
     private void registerAdminCommands(CommandDispatcher<ServerCommandSource> dispatcher) {
-        dispatcher.register(CommandManager.literal("authadmin")
+        var adminCommand = CommandManager.literal("authadmin")
             .requires(source -> source.hasPermissionLevel(4))
             .then(CommandManager.literal("reload")
                 .executes(ctx -> {
@@ -92,7 +92,25 @@ public final class AuthCommands {
                     .executes(this::executeAdminUnregister)))
             .then(CommandManager.literal("unlock")
                 .then(CommandManager.argument("player", StringArgumentType.word())
-                    .executes(this::executeAdminUnlock))));
+                    .executes(this::executeAdminUnlock)));
+
+        dispatcher.register(adminCommand);
+
+        var authAlias = CommandManager.literal("auth")
+            .requires(source -> source.hasPermissionLevel(4))
+            .then(CommandManager.literal("reload")
+                .executes(ctx -> {
+                    ctx.getSource().sendFeedback(() -> Text.literal("§aAuthSecured configuration reloaded."), true);
+                    return 1;
+                }))
+            .then(CommandManager.literal("unregister")
+                .then(CommandManager.argument("player", StringArgumentType.word())
+                    .executes(this::executeAdminUnregister)))
+            .then(CommandManager.literal("unlock")
+                .then(CommandManager.argument("player", StringArgumentType.word())
+                    .executes(this::executeAdminUnlock)));
+
+        dispatcher.register(authAlias);
     }
 
     private int executeRegister(CommandContext<ServerCommandSource> ctx) {

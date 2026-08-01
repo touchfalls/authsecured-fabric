@@ -2,18 +2,19 @@ package net.authsecured.core.db;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import net.authsecured.core.config.DatabaseConfig;
 import org.flywaydb.core.Flyway;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.sql.DataSource;
 import java.io.File;
+import java.sql.Connection;
+import java.sql.SQLException;
 
 /**
- * Enterprise Database service managing HikariCP connection pools and Flyway schema migrations.
+ * Core Database Service managing HikariCP connection pools, Flyway migrations,
+ * and automatic fallback from PostgreSQL to local SQLite storage on connection failure.
  */
-public final class DatabaseService implements AutoCloseable {
+public final class DatabaseService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DatabaseService.class);
 
@@ -24,65 +25,77 @@ public final class DatabaseService implements AutoCloseable {
         this.config = config;
     }
 
-    public void initialize() {
-        if (config.type() == DatabaseConfig.DatabaseType.SQLITE) {
-            File dbFile = new File(config.sqlitePath());
-            File parentDir = dbFile.getParentFile();
-            if (parentDir != null && !parentDir.exists()) {
-                parentDir.mkdirs();
+    public synchronized void initialize() {
+        if ("postgresql".equalsIgnoreCase(config.driverType())) {
+            try {
+                LOGGER.info("Attempting connection to PostgreSQL database at {}:{}...", config.host(), config.port());
+                this.dataSource = createPostgresDataSource(config);
+                runMigrations("postgresql");
+                LOGGER.info("PostgreSQL database initialized successfully.");
+                return;
+            } catch (Exception e) {
+                LOGGER.warn("Failed to connect/initialize PostgreSQL. Falling back to local SQLite storage!", e);
             }
         }
 
-        HikariConfig hikariConfig = new HikariConfig();
-        hikariConfig.setJdbcUrl(config.getJdbcUrl());
-        hikariConfig.setDriverClassName(config.getDriverClassName());
-        hikariConfig.setUsername(config.username());
-        hikariConfig.setPassword(config.password());
-        hikariConfig.setMaximumPoolSize(config.type() == DatabaseConfig.DatabaseType.SQLITE ? 1 : config.maximumPoolSize());
-        hikariConfig.setConnectionTimeout(config.connectionTimeoutMs());
-        hikariConfig.setPoolName("AuthSecured-HikariPool");
+        LOGGER.info("Initializing local SQLite database at: {}", config.sqliteFilePath());
+        this.dataSource = createSqliteDataSource(config);
+        runMigrations("sqlite");
+        LOGGER.info("SQLite database initialized successfully.");
+    }
 
-        if (config.type() == DatabaseConfig.DatabaseType.SQLITE) {
-            hikariConfig.addDataSourceProperty("journal_mode", "WAL");
-            hikariConfig.addDataSourceProperty("synchronous", "NORMAL");
-            hikariConfig.addDataSourceProperty("busy_timeout", "5000");
+    private HikariDataSource createPostgresDataSource(DatabaseConfig cfg) {
+        HikariConfig hikari = new HikariConfig();
+        hikari.setDriverClassName("org.postgresql.Driver");
+        hikari.setJdbcUrl("jdbc:postgresql://" + cfg.host() + ":" + cfg.port() + "/" + cfg.database());
+        hikari.setUsername(cfg.username());
+        hikari.setPassword(cfg.password());
+        hikari.setMaximumPoolSize(cfg.maxPoolSize());
+        hikari.setMinimumIdle(cfg.minIdle());
+        hikari.setConnectionTimeout(cfg.connectionTimeoutMs());
+        hikari.setPoolName("AuthSecured-Postgres");
+        return new HikariDataSource(hikari);
+    }
+
+    private HikariDataSource createSqliteDataSource(DatabaseConfig cfg) {
+        File file = new File(cfg.sqliteFilePath());
+        if (file.getParentFile() != null) {
+            file.getParentFile().mkdirs();
         }
-
-        this.dataSource = new HikariDataSource(hikariConfig);
-        LOGGER.info("HikariCP connection pool initialized for {} database.", config.type());
-
-        runFlywayMigrations();
+        HikariConfig hikari = new HikariConfig();
+        hikari.setDriverClassName("org.sqlite.JDBC");
+        hikari.setJdbcUrl("jdbc:sqlite:" + cfg.sqliteFilePath());
+        hikari.setMaximumPoolSize(1);
+        hikari.setPoolName("AuthSecured-SQLite");
+        return new HikariDataSource(hikari);
     }
 
-    private void runFlywayMigrations() {
-        LOGGER.info("Executing Flyway database schema migrations for {}...", config.type());
-        String location = switch (config.type()) {
-            case SQLITE -> "classpath:db/migration/sqlite";
-            case POSTGRESQL -> "classpath:db/migration/postgresql";
-        };
-
-        Flyway flyway = Flyway.configure()
-            .dataSource(dataSource)
-            .locations(location)
-            .baselineOnMigrate(true)
-            .load();
-
-        flyway.migrate();
-        LOGGER.info("Flyway database migrations applied successfully.");
-    }
-
-    public DataSource getDataSource() {
-        if (dataSource == null) {
-            throw new IllegalStateException("DatabaseService has not been initialized!");
+    private void runMigrations(String dbType) {
+        try {
+            LOGGER.info("Executing Flyway database migrations for {}...", dbType);
+            Flyway flyway = Flyway.configure()
+                .dataSource(this.dataSource)
+                .locations("db/migration")
+                .baselineOnMigrate(true)
+                .load();
+            flyway.migrate();
+        } catch (Exception e) {
+            LOGGER.error("Flyway migration error!", e);
+            throw new RuntimeException("Database migration failed", e);
         }
-        return dataSource;
     }
 
-    @Override
-    public void close() {
+    public Connection getConnection() throws SQLException {
+        if (dataSource == null || dataSource.isClosed()) {
+            throw new SQLException("DatabaseService is not initialized or pool is closed.");
+        }
+        return dataSource.getConnection();
+    }
+
+    public synchronized void close() {
         if (dataSource != null && !dataSource.isClosed()) {
             dataSource.close();
-            LOGGER.info("HikariCP connection pool closed successfully.");
+            LOGGER.info("Database connection pool closed.");
         }
     }
 }
