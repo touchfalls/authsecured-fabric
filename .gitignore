@@ -1,0 +1,26 @@
+# Gradle & Build artifacts
+.gradle/
+build/
+bin/
+out/
+core/build/
+core/lib/
+fabric/build/
+fabric/.gradle/
+
+# IDE files
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.classpath
+.project
+.settings/
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log

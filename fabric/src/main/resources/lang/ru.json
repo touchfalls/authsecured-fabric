@@ -1,0 +1,15 @@
+{
+  "authsecured.login.prompt": "&cПожалуйста, авторизуйтесь через /login или /register",
+  "authsecured.login.success": "&aС возвращением, %s! Авторизация успешна.",
+  "authsecured.login.already": "&cВы уже авторизованы!",
+  "authsecured.login.invalid": "&cНеверный пароль!",
+  "authsecured.login.not_registered": "&cАккаунт не найден. Используйте /register <пароль> <повторПароля>",
+  "authsecured.register.success": "&aАккаунт успешно зарегистрирован и авторизован!",
+  "authsecured.register.already": "&cВы уже зарегистрированы! Используйте /login <пароль>",
+  "authsecured.register.mismatch": "&cПароли не совпадают!",
+  "authsecured.changepassword.success": "&aПароль успешно изменен!",
+  "authsecured.changepassword.invalid_old": "&cНеверный текущий пароль!",
+  "authsecured.logout.success": "&aВы успешно вышли из системы.",
+  "authsecured.ratelimit.locked": "&cСлишком много неверных попыток! Блокировка на %d сек.",
+  "authsecured.command.restriction": "&cДо авторизации разрешены только команды /login, /register или /changepassword."
+}

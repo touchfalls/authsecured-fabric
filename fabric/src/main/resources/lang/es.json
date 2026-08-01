@@ -1,0 +1,15 @@
+{
+  "authsecured.login.prompt": "&cPor favor autentícate primero usando /login o /register",
+  "authsecured.login.success": "&a¡Bienvenido de nuevo, %s! Autenticación exitosa.",
+  "authsecured.login.already": "&c¡Ya estás autenticado!",
+  "authsecured.login.invalid": "&c¡Contraseña incorrecta!",
+  "authsecured.login.not_registered": "&cCuenta no encontrada. Usa /register <contraseña> <confirmar>",
+  "authsecured.register.success": "&a¡Cuenta registrada y autenticada con éxito!",
+  "authsecured.register.already": "&c¡Ya estás registrado! Usa /login <contraseña>",
+  "authsecured.register.mismatch": "&c¡Las contraseñas no coinciden!",
+  "authsecured.changepassword.success": "&a¡Contraseña actualizada con éxito!",
+  "authsecured.changepassword.invalid_old": "&c¡Contraseña actual incorrecta!",
+  "authsecured.logout.success": "&aHas cerrado sesión.",
+  "authsecured.ratelimit.locked": "&c¡Demasiados intentos fallidos! Bloqueado durante %d segundos.",
+  "authsecured.command.restriction": "&cSolo puedes usar los comandos /login, /register o /changepassword antes de autenticarte."
+}
