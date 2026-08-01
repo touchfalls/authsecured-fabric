@@ -57,10 +57,14 @@ public final class PasswordHasher {
      * @return true if password matches, false otherwise.
      */
     public boolean verify(char[] password, String encodedHash) {
-        Objects.requireNonNull(password, "Password cannot be null");
-        Objects.requireNonNull(encodedHash, "Encoded hash cannot be null");
+        if (password == null || encodedHash == null || encodedHash.isEmpty()) {
+            wipe(password);
+            return false;
+        }
         try {
             return Password.check(java.nio.CharBuffer.wrap(password), encodedHash).with(argon2Function);
+        } catch (Exception e) {
+            return false;
         } finally {
             wipe(password);
         }

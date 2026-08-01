@@ -64,6 +64,14 @@ public final class LocalMemoryRateLimiter implements RateLimiter {
         return CompletableFuture.completedFuture(null);
     }
 
+    public void cleanupExpired() {
+        Instant now = Instant.now();
+        attempts.entrySet().removeIf(entry -> {
+            AttemptData data = entry.getValue();
+            return !data.isLockedOut(now) && data.isExpired(now, lockoutSeconds);
+        });
+    }
+
     private record AttemptData(int count, Instant lastAttempt, Instant lockoutUntil) {
         boolean isLockedOut(Instant now) {
             return lockoutUntil != null && now.isBefore(lockoutUntil);
